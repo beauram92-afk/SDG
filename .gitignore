@@ -1,0 +1,27 @@
+# Local Python environments and caches
+venv*/
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Datasets, generated tables, model checkpoints and run outputs
+/data/
+/artifacts/
+*.pt
+*.pth
+*.ckpt
+
+# Local credentials and editor settings
+.env
+.env.*
+!.env.example
+.aws/
+.codex/
+.agents/
+.vscode/
+.idea/
+
+# Operating-system files
+Thumbs.db
+.DS_Store

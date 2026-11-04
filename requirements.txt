@@ -1,0 +1,22 @@
+# ---------- Deep learning (GNN-VAE and GNN-DDPM) ----------
+# GPU users: install torch first from https://pytorch.org/get-started/locally/ (match your CUDA version)
+torch>=2.5.0
+pytorch-lightning>=2.4
+torch-geometric
+
+# ---------- Data handling ----------
+pyarrow==23.0.1
+pandas>=2.2
+openpyxl>=3.1
+numpy>=1.26,<2
+scikit-learn>=1.4
+scipy>=1.13
+
+# ---------- Config, utilities ----------
+pyyaml>=6.0.3
+tqdm>=4.66
+faker>=40.0
+
+
+# ---------- Tuning, baselines, evaluation ----------
+optuna>=3.6

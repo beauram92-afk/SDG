@@ -1,0 +1,310 @@
+mode: gnnddpm
+model_type: gnnddpm
+device: auto  # uses CUDA when available, otherwise CPU
+seed: 42
+
+data_dir: data/credit_score
+
+# Shared backbone architecture used by both GNN-VAE and GNN-DDPM.
+gnn:
+  hidden_dim: 64
+  out_dim: 64
+  num_layers: 2
+  dropout: 0.1
+  categorical_embedding_dim: 8
+
+graph:
+  output_dir: artifacts/credit_score/gnnddpm/graphs
+
+training:
+  epochs: 20
+  learning_rate: 0.001
+  weight_decay: 0.00001
+  gradient_clip: 1.0
+  patience: 10
+  num_threads: 2
+  output_dir: artifacts/credit_score/gnnddpm/training
+
+ddpm:
+  num_steps: 1000
+  beta_start: 0.0001
+  beta_end: 0.02
+  hidden_dim: 64
+  time_dim: 32
+
+generation:
+  checkpoint: latest  # or an explicit path to a training run's best.pt
+  seed: 42
+  root_rows: 10       # rows per root table; descendant counts follow training statistics
+  max_rows_per_table: 100000
+  temperature: 1.0    # VAE category/boolean sampling
+  ddpm_sweeps: 2     # conditional passes over synthetic tables
+  clip_to_training_range: true  # clipping counts are recorded in the report
+  restore_fake_pii: true
+  output_dir: artifacts/credit_score/gnnddpm/synthetic
+
+data_splitting:
+  validation_fraction: 0.2
+  seed: 42
+  output_dir: artifacts/credit_score/gnnddpm/splits
+
+dtype_detection:
+  output_path: artifacts/credit_score/detected_schema.yaml
+
+# Standalone stages save separate copies; preprocessing_pipeline combines them.
+preprocessing:
+  output_dir: artifacts/credit_score/preprocessed
+  pipeline_output_dir: artifacts/credit_score/gnnddpm/prepared
+  # input_dir: artifacts/credit_score/fake_pii_data
+  numerical:
+    errors: raise
+    fill_missing: median  # pipeline learns this only from training rows
+    scaling: standard     # pipeline: standard or none
+  categorical:
+    lowercase: false
+    fill_missing: null   # use a string such as __MISSING__ to fill blanks
+  boolean:
+    errors: raise
+    fill_missing: null   # pipeline learns training mode; or set 0/1
+  datetime:
+    format: mixed        # or an explicit format such as '%Y-%m-%d'
+    dayfirst: false
+    utc: true
+    scaling: standard     # pipeline scales Unix seconds using training statistics
+    errors: raise
+
+# PII candidates are replaced on copies; source files are unchanged.
+pii:
+  output_path: artifacts/credit_score/pii_report.yaml
+  output_dir: artifacts/credit_score/fake_pii_data
+pii_locale: en_IN
+pii_seed: 42
+pii_columns:
+  customers:
+    customer_name: name
+    contact_no: phone
+    address: address
+    pincode: postal_code
+    city: city
+    state: state
+  accounts:
+    account_number: bank_account_number
+    ifsc_code: ifsc_code
+  repayments:
+    payment_reference: payment_reference
+
+# Explicit key rules used by data_validation; add only verified keys.
+primary_keys:
+  customers: [customer_id]
+  accounts: [account_id]
+  loans: [loan_id]
+  repayments: [repayment_id]
+  transactions: [transaction_id]
+  credit_inquiries: [inquiry_id]
+relationships:
+  - parent_table_name: customers
+    parent_primary_key: customer_id
+    child_table_name: accounts
+    child_foreign_key: customer_id
+  - parent_table_name: customers
+    parent_primary_key: customer_id
+    child_table_name: loans
+    child_foreign_key: customer_id
+  - parent_table_name: customers
+    parent_primary_key: customer_id
+    child_table_name: credit_inquiries
+    child_foreign_key: customer_id
+  - parent_table_name: accounts
+    parent_primary_key: account_id
+    child_table_name: transactions
+    child_foreign_key: account_id
+  - parent_table_name: loans
+    parent_primary_key: loan_id
+    child_table_name: repayments
+    child_foreign_key: loan_id
+# output_dir: artifacts/runs/gnnddpm_credit_score
+
+# # customers is the root entity.
+# #   customers -> accounts -> transactions
+# #   customers -> loans -> repayments
+# #   customers -> credit_inquiries
+# # Every child table has exactly ONE parent pointer, so no multi-parent generation is needed.
+# relationships:
+#   - parent_table_name: customers
+#     child_table_name: accounts
+#     parent_primary_key: customer_id
+#     child_foreign_key: customer_id
+#   - parent_table_name: customers
+#     child_table_name: loans
+#     parent_primary_key: customer_id
+#     child_foreign_key: customer_id
+#   - parent_table_name: customers
+#     child_table_name: credit_inquiries
+#     parent_primary_key: customer_id
+#     child_foreign_key: customer_id
+#   - parent_table_name: accounts
+#     child_table_name: transactions
+#     parent_primary_key: account_id
+#     child_foreign_key: account_id
+#   - parent_table_name: loans
+#     child_table_name: repayments
+#     parent_primary_key: loan_id
+#     child_foreign_key: loan_id
+
+# multi_fk_generation:
+#   enabled: false
+
+# id_cols:
+#   customers: customer_id
+#   accounts: account_id
+#   loans: loan_id
+#   credit_inquiries: inquiry_id
+#   transactions: transaction_id
+#   repayments: repayment_id
+
+# # Shared mappings prevent raw identifier reuse while preserving equality across tables.
+# identifier_generation:
+#   default: unique
+#   mapped_unique_groups:
+#     customer_id:
+#       - customers.customer_id
+#       - accounts.customer_id
+#       - loans.customer_id
+#       - credit_inquiries.customer_id
+#     account_id:
+#       - accounts.account_id
+#       - transactions.account_id
+#     loan_id:
+#       - loans.loan_id
+#       - repayments.loan_id
+
+# # Personal / sensitive columns: NOT modelled (see exclude_columns), re-created as fake values.
+# pii_locale: en_IN
+# pii_seed: 42
+# pii_columns:
+#   customers:
+#     customer_name: name
+#     contact_no: phone
+#     address: address
+#     pincode: postal_code
+#     city: city
+#     state: state
+#   accounts:
+#     account_number: bank_account_number
+
+#   repayments:
+#     payment_reference: payment_reference
+
+# tables:
+#   customers:
+#     id_cols: [customer_id]
+#     numerical_cols:
+#       - age
+#       - annual_income
+#       - credit_score
+#     categorical_cols:
+#       - employment_type
+#     Date:
+#       - customer_since
+#     exclude_columns: [customer_name, contact_no, address, pincode, city,  state]
+
+#   accounts:
+#     id_cols: [account_id, customer_id]
+#     numerical_cols: [credit_limit]
+#     categorical_cols:
+#       - account_type
+#       - bank_name
+#       - ifsc_code
+#     date_cols:
+#       - account_open_date
+#     exclude_columns: [account_number ]
+
+
+#   loans:
+#     id_cols: [loan_id, customer_id]
+#     numerical_cols: [loan_amount]
+#     categorical_cols:
+#       - loan_type
+#       - loan_status
+#       - lender_name
+#     date_cols:
+#       - loan_start_date
+#     exclude_columns: []
+
+#   credit_inquiries:
+#     id_cols: [inquiry_id, customer_id]
+#     numerical_cols: []
+#     categorical_cols:
+#       - inquiry_type
+#       - institution_name
+#     boolean_cols:
+#       - is_approved
+#     date_cols:
+#       - inquiry_date
+
+#     exclude_columns: []
+
+#   transactions:
+#     id_cols: [transaction_id, account_id]
+#     numerical_cols: [transaction_amount]
+#     categorical_cols:
+#       - transaction_type
+#       - merchant_name
+#     date_cols:
+#       - transaction_date
+#     exclude_columns: []
+
+#   repayments:
+#     id_cols: [repayment_id,loan_id]
+#     numerical_cols: []
+#     boolean_cols:
+#     - is_on_time
+#     date_cols:
+#       - due_date
+#       - payment_date
+#     categorical_top_k: 64
+#     exclude_columns: [payment_reference]
+
+
+# missingness_calibration:
+#   enabled: true
+
+# exclude_from_evaluation: false
+
+# # ---------------- GNN-DDPM training ----------------
+# # The GNN encoder gives every row a context vector (its own features + its parents/children);
+# # the diffusion model then learns to denoise row features conditioned on that vector.
+# # epochs: use 1 for a smoke test, 300-1000 for a real run (diffusion needs more epochs than a VAE).
+# gnn_epochs: 300
+# ddpm_epochs: 500
+# epochs: 500
+# hidden_dim: 64
+# gnn_out_dim: 32          # size of the graph context vector fed to the denoiser
+# dropout: 0.1
+
+# diffusion:
+#   timesteps: 1000
+#   noise_schedule: cosine          # cosine | linear
+#   beta_start: 0.0001              # used only by the linear schedule
+#   beta_end: 0.02                  # used only by the linear schedule
+#   prediction_target: epsilon      # epsilon | x0
+#   loss_type: mse                  # mse | huber
+#   categorical_diffusion: multinomial   # multinomial | gaussian_onehot
+#   sampling_method: ddim           # ddpm | ddim
+#   sampling_steps: 100             # fewer steps than timesteps = faster sampling (ddim)
+#   guidance_scale: 0.0
+
+# denoiser:
+#   hidden_dim: 256
+#   num_layers: 4
+#   time_embedding_dim: 64
+#   activation: silu
+#   use_layer_norm: true
+
+# ema_decay: 0.999                  # exponential moving average of weights for sampling
+# batch_size: 256
+# grad_clip: 1.0
+# weight_decay: 0.0001
+# lr: 0.0002
+# learning_rate: 0.0002
+# scheduler: cosine

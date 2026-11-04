@@ -1,0 +1,321 @@
+mode: gnnvae
+model_type: gnnvae
+device: auto  # uses CUDA when available, otherwise CPU
+seed: 42
+
+data_dir: data/credit_score
+
+# Shared backbone architecture used by both GNN-VAE and GNN-DDPM.
+gnn:
+  hidden_dim: 64
+  out_dim: 64
+  num_layers: 2
+  dropout: 0.1
+  categorical_embedding_dim: 8
+
+graph:
+  output_dir: artifacts/credit_score/gnnvae/graphs
+
+training:
+  epochs: 20
+  learning_rate: 0.001
+  weight_decay: 0.00001
+  gradient_clip: 1.0
+  patience: 10
+  num_threads: 2
+  output_dir: artifacts/credit_score/gnnvae/training
+
+vae:
+  latent_dim: 16
+  hidden_dim: 64
+  kl_weight: 0.01
+
+generation:
+  checkpoint: latest  # or an explicit path to a training run's best.pt
+  seed: 42
+  root_rows: 10       # rows per root table; descendant counts follow training statistics
+  max_rows_per_table: 100000
+  temperature: 1.0    # VAE category/boolean sampling
+  ddpm_sweeps: 2     # conditional passes over synthetic tables
+  clip_to_training_range: true  # clipping counts are recorded in the report
+  restore_fake_pii: true
+  output_dir: artifacts/credit_score/gnnvae/synthetic
+
+data_splitting:
+  validation_fraction: 0.2
+  seed: 42
+  output_dir: artifacts/credit_score/gnnvae/splits
+
+dtype_detection:
+  output_path: artifacts/credit_score/detected_schema.yaml
+
+# Standalone stages save separate copies; preprocessing_pipeline combines them.
+preprocessing:
+  output_dir: artifacts/credit_score/preprocessed
+  pipeline_output_dir: artifacts/credit_score/gnnvae/prepared
+  # input_dir: artifacts/credit_score/fake_pii_data
+  numerical:
+    errors: raise
+    fill_missing: median  # pipeline learns this only from training rows
+    scaling: standard     # pipeline: standard or none
+  categorical:
+    lowercase: false
+    fill_missing: null   # use a string such as __MISSING__ to fill blanks
+  boolean:
+    errors: raise
+    fill_missing: null   # pipeline learns training mode; or set 0/1
+  datetime:
+    format: mixed        # or an explicit format such as '%Y-%m-%d'
+    dayfirst: false
+    utc: true
+    scaling: standard     # pipeline scales Unix seconds using training statistics
+    errors: raise
+
+# PII candidates are replaced on copies; source files are unchanged.
+pii:
+  output_path: artifacts/credit_score/pii_report.yaml
+  output_dir: artifacts/credit_score/fake_pii_data
+pii_locale: en_IN
+pii_seed: 42
+pii_columns:
+  customers:
+    customer_name: name
+    contact_no: phone
+    address: address
+    pincode: postal_code
+    city: city
+    state: state
+  accounts:
+    account_number: bank_account_number
+    ifsc_code: ifsc_code
+  repayments:
+    payment_reference: payment_reference
+
+# Explicit key rules used by data_validation; add only verified keys.
+primary_keys:
+  customers: [customer_id]
+  accounts: [account_id]
+  loans: [loan_id]
+  repayments: [repayment_id]
+  transactions: [transaction_id]
+  credit_inquiries: [inquiry_id]
+relationships:
+  - parent_table_name: customers
+    parent_primary_key: customer_id
+    child_table_name: accounts
+    child_foreign_key: customer_id
+  - parent_table_name: customers
+    parent_primary_key: customer_id
+    child_table_name: loans
+    child_foreign_key: customer_id
+  - parent_table_name: customers
+    parent_primary_key: customer_id
+    child_table_name: credit_inquiries
+    child_foreign_key: customer_id
+  - parent_table_name: accounts
+    parent_primary_key: account_id
+    child_table_name: transactions
+    child_foreign_key: account_id
+  - parent_table_name: loans
+    parent_primary_key: loan_id
+    child_table_name: repayments
+    child_foreign_key: loan_id
+# output_dir: artifacts/runs/gnnvae_credit_score
+
+# # customers is the root entity.
+# #   customers -> accounts -> transactions
+# #   customers -> loans -> repayments
+# #   customers -> credit_inquiries
+# # Every child table has exactly ONE parent pointer, so no multi-parent generation is needed.
+# relationships:
+#   - parent_table_name: customers
+#     child_table_name: accounts
+#     parent_primary_key: customer_id
+#     child_foreign_key: customer_id
+#   - parent_table_name: customers
+#     child_table_name: loans
+#     parent_primary_key: customer_id
+#     child_foreign_key: customer_id
+#   - parent_table_name: customers
+#     child_table_name: credit_inquiries
+#     parent_primary_key: customer_id
+#     child_foreign_key: customer_id
+#   - parent_table_name: accounts
+#     child_table_name: transactions
+#     parent_primary_key: account_id
+#     child_foreign_key: account_id
+#   - parent_table_name: loans
+#     child_table_name: repayments
+#     parent_primary_key: loan_id
+#     child_foreign_key: loan_id
+
+# multi_fk_generation:
+#   enabled: false
+
+# id_cols:
+#   customers: customer_id
+#   accounts: account_id
+#   loans: loan_id
+#   credit_inquiries: inquiry_id
+#   transactions: transaction_id
+#   repayments: repayment_id
+
+# # Shared mappings prevent raw identifier reuse while preserving equality across tables.
+# identifier_generation:
+#   default: sample
+#   mapped_unique_groups:
+#     customer_id:
+#       - customers.customer_id
+#       - accounts.customer_id
+#       - loans.customer_id
+#       - credit_inquiries.customer_id
+#     account_id:
+#       - accounts.account_id
+#       - transactions.account_id
+#     loan_id:
+#       - loans.loan_id
+#       - repayments.loan_id
+
+# # Personal / sensitive columns: NOT modelled (see exclude_columns), re-created as fake values.
+# pii_locale: en_IN
+# pii_seed: 42
+# pii_columns:
+#   customers:
+#     customer_name: name
+#     contact_no: phone
+#     address: address
+#     pincode: postal_code
+#   accounts:
+#     account_number: bank_account_number
+#     ifsc_code: ifsc_code
+#   repayments:
+#     payment_reference: payment_reference
+
+# tables:
+#   customers:
+#     id_cols: [customer_id]
+#     numerical_cols:
+#       - age
+#       - annual_income
+#       - credit_score
+#     categorical_cols:
+#       - customer_since
+#       - employment_type
+#       - city
+#       - state
+#     categorical_top_k: 64
+#     exclude_columns: [customer_name, contact_no, address, pincode]
+
+#   accounts:
+#     id_cols: [account_id]
+#     numerical_cols: [credit_limit]
+#     categorical_cols:
+#       - account_open_date
+#       - account_type
+#       - bank_name
+#     categorical_top_k: 64
+#     exclude_columns: [account_number, ifsc_code]
+
+#   loans:
+#     id_cols: [loan_id]
+#     numerical_cols: [loan_amount]
+#     categorical_cols:
+#       - loan_start_date
+#       - loan_type
+#       - loan_status
+#       - lender_name
+#     categorical_top_k: 64
+#     exclude_columns: []
+
+#   credit_inquiries:
+#     id_cols: [inquiry_id]
+#     numerical_cols: []
+#     categorical_cols:
+#       - inquiry_date
+#       - inquiry_type
+#       - is_approved
+#       - institution_name
+#     categorical_top_k: 64
+#     exclude_columns: []
+
+#   transactions:
+#     id_cols: [transaction_id]
+#     numerical_cols: [transaction_amount]
+#     categorical_cols:
+#       - transaction_date
+#       - transaction_type
+#       - merchant_name
+#     categorical_top_k: 64
+#     exclude_columns: []
+
+#   repayments:
+#     id_cols: [repayment_id]
+#     numerical_cols: []
+#     categorical_cols:
+#       - due_date
+#       - payment_date
+#       - is_on_time
+#     categorical_top_k: 64
+#     exclude_columns: [payment_reference]
+
+# date_name_hints: [date, dte, time, since]
+# date_value_sniff_enabled: true
+# date_dayfirst: false
+# date_mixed_format_policy: warn
+
+# temporal_model:
+#   enabled: true
+#   inference: auto
+#   enforce_ordering: true
+#   enforce_parent_child_temporal: false
+#   fallback: independent_with_warning
+#   tables:
+#     customers: { columns: [customer_since] }
+#     accounts: { columns: [account_open_date] }
+#     loans: { columns: [loan_start_date] }
+#     credit_inquiries: { columns: [inquiry_date] }
+#     transactions: { columns: [transaction_date] }
+#     repayments: { columns: [due_date, payment_date] }
+#   # Intentionally empty: in the real data 4 of 27 repayments are paid BEFORE the due date,
+#   # so "due_date <= payment_date" would be wrong. payment_date may also be missing (unpaid).
+#   constraints: []
+
+# domain_constraints:
+#   - { table: customers, column: age, type: integer_range, min: 18, max: 100 }
+#   - { table: customers, column: annual_income, type: non_negative }
+#   - { table: customers, column: credit_score, type: integer_range, min: 300, max: 900 }
+#   - { table: accounts, column: credit_limit, type: non_negative }
+#   - { table: loans, column: loan_amount, type: non_negative }
+#   # transaction_amount is NOT constrained: the real data contains negative amounts (refunds/debits).
+
+# missingness_calibration:
+#   enabled: true
+
+# integer_columns:
+#   customers: [age, credit_score]
+#   loans: [loan_amount]
+
+# exclude_from_evaluation: false
+
+# # ---------------- GNN-VAE training ----------------
+# # epochs: use 1 for a smoke test, 200-500 for a real run.
+# gnn_epochs: 300
+# vae_epochs: 300
+# epochs: 300
+# hidden_dim: 64
+# gnn_out_dim: 32
+# latent_dim: 16
+# vae_hidden_dim: 64
+# dropout: 0.1
+# beta_vae: 1.0
+# numeric_decoder_type: gaussian
+# numeric_distribution_loss:
+#   enabled: true
+#   loss_weight: 0.10
+#   std_weight: 1.0
+#   wasserstein_weight: 0.5
+#   min_batch_size: 8
+#   max_rows: 512
+# weight_decay: 0.0001
+# lr: 0.001
+# learning_rate: 0.001
