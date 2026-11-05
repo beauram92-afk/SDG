@@ -101,7 +101,7 @@ def detect_table(table_name, df):
 
 if __name__ == "__main__":
     import argparse
-    from src.data_loading import load_tables
+    from src.data_handling.data_loading import load_tables
 
     parser = argparse.ArgumentParser(description="Detect column types using a YAML config.")
     parser.add_argument("config", help="project YAML; relative paths use the current directory")

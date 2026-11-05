@@ -21,5 +21,5 @@ def preprocess_column(series, options):
 
 
 if __name__ == "__main__":
-    from src.preprocessing import run_stage
+    from src.pre_processing.preprocessing import run_stage
     run_stage("boolean", preprocess_column)

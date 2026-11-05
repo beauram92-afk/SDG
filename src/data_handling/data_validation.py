@@ -7,7 +7,7 @@ from pathlib import Path
 import pandas as pd
 import yaml
 
-from src.data_loading import load_tables
+from src.data_handling.data_loading import load_tables
 
 
 def read_yaml(path):

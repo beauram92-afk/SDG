@@ -6,7 +6,7 @@ import pandas as pd
 import torch
 import yaml
 
-from src.data_loading import load_tables
+from src.data_handling.data_loading import load_tables
 
 
 def build_graph(tables, state, config):

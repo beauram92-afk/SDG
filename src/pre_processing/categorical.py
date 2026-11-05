@@ -28,5 +28,5 @@ def transform_column(series, options, state):
 
 
 if __name__ == "__main__":
-    from src.preprocessing import run_stage
+    from src.pre_processing.preprocessing import run_stage
     run_stage("categorical", preprocess_column)

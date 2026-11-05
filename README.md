@@ -1,7 +1,7 @@
 # SDG
 
 YAML-driven synthetic relational data generation with GNN-VAE and GNN-DDPM.
-Both models use the shared encoder in `src/models/gnn.py`.
+Both models use the shared encoder in `src/models/gnn/gnn.py`.
 
 ## Setup
 
@@ -22,16 +22,16 @@ and review primary keys, relationships, PII mappings and detected column types.
 Example for GNN-VAE; use `configs/gnnddpm.yaml` for GNN-DDPM:
 
 ```powershell
-python -m src.data_loading configs/gnnvae.yaml
-python -m src.dtype_detection configs/gnnvae.yaml
-python -m src.data_validation configs/gnnvae.yaml
-python -m src.preprocessing_pipeline configs/gnnvae.yaml
-python -m src.graph_builder configs/gnnvae.yaml
-python -m src.train configs/gnnvae.yaml
-python -m src.generate configs/gnnvae.yaml
+python -m src.data_handling.data_loading configs/gnnvae.yaml
+python -m src.data_handling.dtype_detection configs/gnnvae.yaml
+python -m src.data_handling.data_validation configs/gnnvae.yaml
+python -m src.pre_processing.preprocessing_pipeline configs/gnnvae.yaml
+python -m src.models.gnn.graph_builder configs/gnnvae.yaml
+python -m src.scripts.train configs/gnnvae.yaml
+python -m src.scripts.generate configs/gnnvae.yaml
 ```
 
-Review the detected schema before preprocessing. Run `python -m src.pii
+Review the detected schema before preprocessing. Run `python -m src.pre_processing.pii
 configs/gnnvae.yaml` separately to export source-table copies with fake PII.
 The generation command restores fake PII directly on synthetic tables.
 

@@ -5,13 +5,13 @@ from pathlib import Path
 import pandas as pd
 import yaml
 
-from src import boolean, categorical, datehandling, numericalpreprocessing as numerical
-from src.data_loading import load_tables
-from src.data_splitting import save_splits, split_tables
+from src.pre_processing import boolean, categorical, date_handling, numericalpreprocessing as numerical
+from src.data_handling.data_loading import load_tables
+from src.data_handling.data_splitting import save_splits, split_tables
 
 
 def _date_numbers(series, options):
-    dates = datehandling.preprocess_column(series, options)
+    dates = date_handling.preprocess_column(series, options)
     return dates.map(lambda value: float("nan") if pd.isna(value) else value.value / 1e9).astype("float64")
 
 

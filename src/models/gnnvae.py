@@ -2,8 +2,8 @@
 import torch
 from torch import nn
 
-from src.models.features import FeatureLayout
-from src.models.gnn import build_shared_gnn
+from src.models.gnn.features import FeatureLayout
+from src.models.gnn.gnn import build_shared_gnn
 
 
 class GNNVAE(nn.Module):

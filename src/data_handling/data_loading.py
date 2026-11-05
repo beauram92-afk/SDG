@@ -1,8 +1,8 @@
 # src/data_loading.py
 """Step 1: read the table files from a folder. Nothing else.
 
-Run from the project root: python -m src.data_loading <data_folder>
-Or use a YAML's data_dir: python -m src.data_loading configs/gnnvae.yaml
+Run from the project root: python -m src.data_handling.data_loading <data_folder>
+Or use a YAML's data_dir: python -m src.data_handling.data_loading configs/gnnvae.yaml
 """
 import csv
 

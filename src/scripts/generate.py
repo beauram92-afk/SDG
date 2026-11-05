@@ -9,11 +9,11 @@ import pandas as pd
 import torch
 import yaml
 
-from src.graph_builder import build_graph
-from src.evaluation import compare_features
-from src.inverse_preprocessing import inverse_tables
-from src.pii import replace_pii
-from src.train import build_model
+from src.models.gnn.graph_builder import build_graph
+from src.scripts.evaluation import compare_features
+from src.post_processing.inverse_preprocessing import inverse_tables
+from src.pre_processing.pii import replace_pii
+from src.scripts.train import build_model
 
 
 def plan_tables(state, config, training_graph, options, rng):
@@ -207,7 +207,7 @@ def generate(config):
                 tables[table][column] = [f"synthetic-{table}-{column}-{i}" for i in range(len(tables[table]))]
                 report["tables"][table][column] = {"pii_type": kind}
         tables = replace_pii(tables, report, {**trained, "pii_seed": seed})
-    from src.data_validation import validate_tables
+    from src.data_handling.data_validation import validate_tables
     issues = validate_tables(tables, config=trained)
     fatal = [issue for issue in issues if issue["check"] in
              ("pk_null", "pk_duplicate", "orphan_fk", "fk_configuration", "missing_table", "missing_pk_column")]

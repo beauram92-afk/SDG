@@ -1,6 +1,6 @@
 """Detect PII candidates and export copies with fake replacements.
 
-Run: python -m src.pii configs/gnnvae.yaml
+Run: python -m src.pre_processing.pii configs/gnnvae.yaml
 """
 import argparse
 from pathlib import Path
@@ -8,7 +8,7 @@ from pathlib import Path
 import yaml
 from faker import Faker
 
-from src.data_loading import load_tables
+from src.data_handling.data_loading import load_tables
 
 
 def detect_pii(tables, config):

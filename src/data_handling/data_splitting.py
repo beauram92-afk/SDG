@@ -5,7 +5,7 @@ from pathlib import Path
 import numpy as np
 import yaml
 
-from src.data_loading import load_tables
+from src.data_handling.data_loading import load_tables
 
 
 def split_tables(tables, config):

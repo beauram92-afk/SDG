@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 from scipy.stats import ks_2samp
 
-from src.datehandling import preprocess_column as parse_dates
+from src.pre_processing.date_handling import preprocess_column as parse_dates
 
 
 def compare_features(reference, synthetic, state):

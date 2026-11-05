@@ -4,7 +4,7 @@ from pathlib import Path
 
 import yaml
 
-from src.data_loading import load_tables
+from src.data_handling.data_loading import load_tables
 
 
 def preprocess_tables(tables, schema, config, stage, transform):
